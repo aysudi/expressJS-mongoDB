@@ -11,31 +11,62 @@ import {
   update as updateAuthor,
   getOne as getAuthor,
 } from "../services/authorService.js";
+import BookModel from "../models/booksModel.js";
+import { SortOrder } from "mongoose";
 
 // get all books
 export const getBooks = async (
-  _: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const books = await getAll();
+    const {
+      search = "",
+      sortBy = "price",
+      order = "asc",
+    } = req.query as {
+      search?: string;
+      sortBy?: string;
+      order?: string;
+      page?: string;
+      limit?: string;
+    };
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 3;
+
+    const allowedSortFields = ["price", "title", "createdAt"];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : "price";
+    const sortOrder: SortOrder = order === "desc" ? -1 : 1;
+
+    const filter = search
+      ? {
+          $or: [{ title: { $regex: search, $options: "i" } }],
+        }
+      : {};
+
+    const books = await getAll(page, limit, safeSortBy, sortOrder, filter);
+    const total = await BookModel.countDocuments(filter);
 
     const formattedBooks = books.map((book) => {
-      const bookObj = book.toObject();
-
       const formattedAuthor =
-        typeof bookObj.author === "object"
-          ? formatMongoData(bookObj.author)
-          : bookObj.author;
+        typeof book.author === "object"
+          ? formatMongoData(book.author)
+          : book.author;
 
       return {
-        ...formatMongoData(bookObj),
+        ...formatMongoData(book),
         author: formattedAuthor,
       };
     });
 
-    res.status(200).json(formattedBooks);
+    res.status(200).json({
+      totalData: total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data: formattedBooks,
+    });
   } catch (error) {
     next(error);
   }
@@ -76,9 +107,6 @@ export const postBook = async (
     const newBook = await post(req.body);
     const author = await getAuthor(req.body.author);
     if (!author) throw new Error("author not found");
-    await updateAuthor(req.body.author, {
-      books: [...author.books, newBook.id],
-    });
 
     res.status(201).json(formatMongoData(newBook));
   } catch (error) {

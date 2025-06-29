@@ -1,5 +1,12 @@
 import BookModel from "../models/booksModel.js";
-export const getAll = async () => await BookModel.find().populate("author");
+export const getAll = async (page, limit, sortBy, order, filter) => {
+    return await BookModel.find(filter)
+        .sort({ [sortBy]: order })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("author")
+        .lean();
+};
 export const getOne = async (id) => await BookModel.findById(id).populate("author");
 export const update = async (id, payload) => await BookModel.findByIdAndUpdate(id, payload, { new: true }).populate("author");
 export const post = async (payload) => await BookModel.create(payload);

@@ -18,7 +18,7 @@ export const getAuthors = async (
     const authors = await getAll();
 
     const formattedAuthors = authors.map((author) => {
-      const authorObj = author.toObject();
+      const authorObj = author.toObject() as any;
 
       const formattedBook = formatMongoData(authorObj.books);
 
@@ -46,7 +46,7 @@ export const getAuthorById = async (
 
     if (!author) throw new Error("author is not found");
 
-    const authorObj = author.toObject();
+    const authorObj = author.toObject() as any;
     const formattedBooks = formatMongoData(authorObj.books);
     const formattedAuthor = {
       ...formatMongoData(authorObj),
@@ -81,10 +81,17 @@ export const deleteAuthor = async (
 ) => {
   try {
     const { id } = req.params;
-    const deletedAuthor = await deleteOne(id);
-    if (!deletedAuthor) throw new Error("author is not found");
+    const author = await getOne(id);
+    if (!author) throw new Error("author is not found");
 
-    res.status(200).json(formatMongoData(deletedAuthor));
+    const relaredBooks = (author as any).books;
+    if (relaredBooks.length > 0) {
+      throw new Error("Cannot delete this author, it has related books");
+    } else {
+      const deletedAuthor = await deleteOne(id);
+      if (!deletedAuthor) throw new Error("author is not found");
+      res.status(200).json(formatMongoData(deletedAuthor));
+    }
   } catch (error) {
     next(error);
   }

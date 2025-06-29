@@ -51,10 +51,19 @@ export const postAuthor = async (req, res, next) => {
 export const deleteAuthor = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const deletedAuthor = await deleteOne(id);
-        if (!deletedAuthor)
+        const author = await getOne(id);
+        if (!author)
             throw new Error("author is not found");
-        res.status(200).json(formatMongoData(deletedAuthor));
+        const relaredBooks = author.books;
+        if (relaredBooks.length > 0) {
+            throw new Error("Cannot delete this author, it has related books");
+        }
+        else {
+            const deletedAuthor = await deleteOne(id);
+            if (!deletedAuthor)
+                throw new Error("author is not found");
+            res.status(200).json(formatMongoData(deletedAuthor));
+        }
     }
     catch (error) {
         next(error);

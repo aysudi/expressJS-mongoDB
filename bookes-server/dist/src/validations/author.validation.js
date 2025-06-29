@@ -21,9 +21,5 @@ const authorValidationSchema = Joi.object({
         "string.max": "Author bio cannot be longer than 500 characters.",
     })
         .required(),
-    books: Joi.array().items(JoiObjectId()).messages({
-        "array.base": "Books must be an array.",
-        "array.items": "Each book should be a string representing a book ID.",
-    }),
 });
 export default authorValidationSchema;

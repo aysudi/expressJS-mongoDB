@@ -8,11 +8,13 @@ const authorSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    books: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Book",
-        },
-    ],
 }, { timestamps: true });
+authorSchema.virtual("books", {
+    ref: "Book",
+    localField: "_id",
+    foreignField: "author",
+    justOne: false,
+});
+authorSchema.set("toObject", { virtuals: true });
+authorSchema.set("toJSON", { virtuals: true });
 export default authorSchema;
