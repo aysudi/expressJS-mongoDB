@@ -7,6 +7,8 @@ import bookRouter from "./routes/booksRoute.js";
 import authorRouter from "./routes/authorRoute.js";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import sliderRouter from "./routes/sliderRoute.js";
+import userRouter from "./routes/userRoute.js";
 
 dotenv.config();
 
@@ -28,6 +30,8 @@ app.use(helmet());
 //route
 app.use("/books", bookRouter);
 app.use("/authors", authorRouter);
+app.use("/sliders", sliderRouter);
+app.use("/auth", userRouter);
 
 app.use(errorHandler);
 

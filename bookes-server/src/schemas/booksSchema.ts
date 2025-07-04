@@ -20,7 +20,19 @@ const bookSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    downloadURL: {
+    coverImage: {
+      type: String,
+      required: true,
+    },
+    coverImagePublicId: {
+      type: String,
+      required: true,
+    },
+    bookPDF: {
+      type: String,
+      required: true,
+    },
+    bookPDFPublicId: {
       type: String,
       required: true,
     },
@@ -49,6 +61,21 @@ const bookSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    reviewCount: { type: Number, default: 0 },
+    stockQuantity: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    sold: {
+      type: Number,
+      default: 0,
+      required: true,
+    },
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     digital: {
       type: Boolean,
       required: true,
@@ -62,5 +89,15 @@ const bookSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+bookSchema.virtual("reviews", {
+  ref: "Review",
+  localField: "_id",
+  foreignField: "book",
+  justOne: false,
+});
+
+bookSchema.set("toObject", { virtuals: true });
+bookSchema.set("toJSON", { virtuals: true });
 
 export default bookSchema;

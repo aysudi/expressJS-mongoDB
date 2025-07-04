@@ -8,13 +8,30 @@ import {
 } from "../controllers/booksController.js";
 import logger from "../middlewares/logger.js";
 import bookValidate from "../middlewares/bookValidate.js";
+import uploadMiddleware from "../middlewares/uploadMiddleware.js";
 
 const bookRouter = express.Router();
+const upload = uploadMiddleware("books");
 
 bookRouter.get("/", logger, getBooks);
 bookRouter.get("/:id", getBookById);
-bookRouter.post("/", bookValidate, postBook);
+bookRouter.post(
+  "/",
+  upload.fields([
+    { name: "coverImage", maxCount: 1 },
+    { name: "bookPDF", maxCount: 1 },
+  ]),
+  bookValidate,
+  postBook
+);
 bookRouter.delete("/:id", deleteBook);
-bookRouter.patch("/:id", updateBook);
+bookRouter.patch(
+  "/:id",
+  upload.fields([
+    { name: "coverImage", maxCount: 1 },
+    { name: "bookPDF", maxCount: 1 },
+  ]),
+  updateBook
+);
 
 export default bookRouter;

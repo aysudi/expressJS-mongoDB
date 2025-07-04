@@ -7,12 +7,10 @@ import {
   update,
 } from "../services/bookService.js";
 import formatMongoData from "../utils/formatMongoData.js";
-import {
-  update as updateAuthor,
-  getOne as getAuthor,
-} from "../services/authorService.js";
+import { getOne as getAuthor } from "../services/authorService.js";
 import BookModel from "../models/booksModel.js";
 import { SortOrder } from "mongoose";
+import { v2 as cloudinary } from "cloudinary";
 
 // get all books
 export const getBooks = async (
@@ -102,13 +100,40 @@ export const postBook = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
-    const newBook = await post(req.body);
+    const files = req.files as {
+      coverImage?: Express.Multer.File[];
+      bookPDF?: Express.Multer.File[];
+    };
+
+    const coverImageUrl = files.coverImage?.[0]?.path;
+    const bookPdfUrl = files.bookPDF?.[0]?.path;
+
+    const coverImagePublicId = files.coverImage?.[0]?.filename;
+    const bookPdfPublicId = files.bookPDF?.[0]?.filename;
+
+    if (!coverImageUrl || !bookPdfUrl) {
+      res.status(400).json({ error: "Missing uploaded files" });
+      return;
+    }
+
+    const bookData = {
+      ...req.body,
+      coverImage: coverImageUrl,
+      coverImagePublicId: coverImagePublicId,
+      bookPDF: bookPdfUrl,
+      bookPDFPublicId: bookPdfPublicId,
+    };
+
     const author = await getAuthor(req.body.author);
     if (!author) throw new Error("author not found");
 
-    res.status(201).json(formatMongoData(newBook));
+    const newBook = await post(bookData);
+    res.status(201).json({
+      message: "created new book",
+      data: formatMongoData(newBook),
+    });
   } catch (error) {
     next(error);
   }
@@ -119,13 +144,29 @@ export const deleteBook = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = req.params;
-    const deletedBook = await deleteOne(id);
-    if (!deletedBook) throw new Error("book is not found");
 
-    res.status(200).json(formatMongoData(deletedBook));
+    const book = await getOne(id);
+    if (!book) {
+      res.status(404).json({ message: "Book not found" });
+      return;
+    }
+
+    if (book.coverImagePublicId) {
+      await cloudinary.uploader.destroy(book.coverImagePublicId);
+    }
+
+    if (book.bookPDFPublicId) {
+      await cloudinary.uploader.destroy(book.bookPDFPublicId);
+    }
+
+    const deletedBook = await deleteOne(id);
+    res.status(200).json({
+      message: "deleted successfully",
+      data: formatMongoData(deletedBook),
+    });
   } catch (error) {
     next(error);
   }
@@ -136,13 +177,48 @@ export const updateBook = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = req.params;
-    const updatedBook = { ...req.body };
-    const updateBookResponse = await update(id, updatedBook);
 
-    res.status(200).json(formatMongoData(updateBookResponse));
+    const book = await getOne(id);
+
+    if (!book) {
+      res.status(404).json({ message: "Book not found" });
+      return;
+    }
+
+    const files = req.files as {
+      coverImage?: Express.Multer.File[];
+      bookPDF?: Express.Multer.File[];
+    };
+
+    const updatedFields: any = { ...req.body };
+
+    if (files?.coverImage?.[0]?.path) {
+      if (book.coverImagePublicId) {
+        await cloudinary.uploader.destroy(book.coverImagePublicId);
+      }
+      updatedFields.coverImage = files.coverImage[0].path;
+      updatedFields.coverImagePublicId = files.coverImage[0].filename;
+    }
+
+    if (files?.bookPDF?.[0]?.path) {
+      if (book.bookPDFPublicId) {
+        await cloudinary.uploader.destroy(book.bookPDFPublicId, {
+          resource_type: "raw",
+        });
+      }
+      updatedFields.bookPDF = files.bookPDF[0].path;
+      updatedFields.bookPDFPublicId = files.bookPDF[0].filename;
+    }
+
+    const updatedBook = await update(id, updatedFields);
+
+    res.status(200).json({
+      message: "Updated successfully",
+      data: formatMongoData(updatedBook),
+    });
   } catch (error) {
     next(error);
   }

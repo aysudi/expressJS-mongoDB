@@ -1,6 +1,5 @@
 import Joi from "joi";
 import joiObjectId from "joi-objectid";
-// Extend Joi with objectId()
 const JoiObjectId = joiObjectId(Joi);
 const authorValidationSchema = Joi.object({
     name: Joi.string()

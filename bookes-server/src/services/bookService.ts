@@ -14,18 +14,23 @@ export const getAll = async (
     .skip((page - 1) * limit)
     .limit(limit)
     .populate("author")
+    .populate("vendor", "fullName username")
     .lean();
 };
 
 export const getOne = async (id: string) =>
-  await BookModel.findById(id).populate("author");
+  await BookModel.findById(id)
+    .populate("author")
+    .populate("reviews")
+    .populate("vendor", "fullName username");
 
-export const update = async (id: string, payload: any) =>
+export const update = async (id: string, payload: BookDocument) =>
   await BookModel.findByIdAndUpdate(id, payload, { new: true }).populate(
     "author"
   );
 
-export const post = async (payload: any) => await BookModel.create(payload);
+export const post = async (payload: BookDocument) =>
+  await BookModel.create(payload);
 
 export const deleteOne = async (id: string) =>
   await BookModel.findByIdAndDelete(id);
